@@ -531,14 +531,3 @@ After completing this **Aniket DevOps** project, you should be able to explain a
 - Why deployment completion and application health are different checks.
 - How to migrate a pipeline incrementally without changing the application server.
 
----
-
-## About Aniket DevOps
-
-**Aniket DevOps** is a practical, production-oriented learning project focused on DevOps, DevSecOps, cloud, containers, Kubernetes, Terraform, GitOps, observability and AI for DevOps.
-
-- GitHub: [github.com/anikethulule](https://github.com/anikethulule)
-
-### Built for the DevOps community by Aniket DevOps
-
-**Learn. Build. Automate.**
