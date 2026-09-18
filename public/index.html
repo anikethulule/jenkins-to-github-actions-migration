@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Aniket DevOps: a practical Jenkins to GitHub Actions migration project." />
+    <title>Aniket DevOps | Jenkins to GitHub Actions Migration</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="#top" aria-label="Aniket DevOps home">
+          <span class="brand-mark" aria-hidden="true">AD</span>
+          <span><strong>Aniket DevOps</strong><small>Migration project</small></span>
+        </a>
+
+        <nav aria-label="Primary navigation">
+          <a href="#approach">Approach</a>
+          <a href="#comparison">Comparison</a>
+          <a href="#pipeline">Pipeline</a>
+        </nav>
+
+        <div class="api-status" id="api-status" role="status" aria-live="polite">
+          <span class="status-dot"></span>
+          <span>Checking API</span>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow"><span>PROJECT 01</span> CI/CD migration</div>
+            <h1>From Jenkins<br /><em>to Actions.</em></h1>
+            <p>
+              Aniket DevOps is a working migration project that translates a traditional Jenkins delivery pipeline into a cleaner, repository-native GitHub Actions workflow.
+            </p>
+
+            <div class="hero-actions">
+              <button class="primary-button" id="run-demo" type="button">
+                <span>Run the migration</span><span aria-hidden="true">↗</span>
+              </button>
+              <a class="secondary-button" href="#approach">See the approach</a>
+            </div>
+
+            <div class="quick-stats" aria-label="Project highlights">
+              <div><strong>06</strong><span>Stages mapped</span></div>
+              <div><strong>01</strong><span>Unified workflow</span></div>
+              <div><strong>00</strong><span>Static secrets</span></div>
+            </div>
+          </div>
+
+          <div class="hero-art" aria-label="Aniket DevOps migration project image">
+            <div class="image-frame"><img src="/aniket-devops-migration-dashboard.jpg" alt="Aniket DevOps Jenkins to GitHub Actions migration dashboard" width="1553" height="1013" fetchpriority="high" /></div>
+            <div class="art-note note-top"><span>STATUS</span><strong>IN TRANSITION</strong></div>
+            <div class="art-note note-bottom"><span>OWNER</span><strong>ANIKET DEVOPS</strong></div>
+          </div>
+        </section>
+
+        <section class="section approach-section" id="approach">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">THE MIGRATION BRIEF</span>
+              <h2>Keep the logic.<br />Improve the flow.</h2>
+            </div>
+            <p>Move delivery closer to the repository with visible checks, portable runners, and one workflow your team can read in a pull request.</p>
+          </div>
+          <div class="principles">
+            <article><span class="principle-index">01</span><h3>Translate</h3><p>Map each Jenkins stage to a focused GitHub Actions job without losing delivery intent.</p></article>
+            <article><span class="principle-index">02</span><h3>Secure</h3><p>Replace machine-bound credentials with repository environments and managed secrets.</p></article>
+            <article><span class="principle-index">03</span><h3>Measure</h3><p>Make every build, test, scan, and deploy visible where the code already lives.</p></article>
+          </div>
+        </section>
+
+        <section class="section pipeline-section" id="pipeline">
+          <div class="section-heading"><div><span class="section-kicker">LIVE PIPELINE</span><h2>Six stages.<br />One confident release.</h2></div><p>Run the demo to watch the migration move from source checkout to deployment.</p></div>
+
+          <div class="pipeline-track" id="pipeline-track">
+            <article class="stage-card" data-stage="0">
+              <span class="stage-number">01</span>
+              <div class="stage-icon blue">⌘</div>
+              <h3>Source</h3>
+              <p>Checkout code</p>
+              <span class="stage-state">Ready</span>
+            </article>
+            <article class="stage-card" data-stage="1">
+              <span class="stage-number">02</span>
+              <div class="stage-icon violet">✓</div>
+              <h3>Test</h3>
+              <p>Run Node tests</p>
+              <span class="stage-state">Ready</span>
+            </article>
+            <article class="stage-card" data-stage="2">
+              <span class="stage-number">03</span>
+              <div class="stage-icon amber">◇</div>
+              <h3>Build</h3>
+              <p>Create image</p>
+              <span class="stage-state">Ready</span>
+            </article>
+            <article class="stage-card" data-stage="3">
+              <span class="stage-number">04</span>
+              <div class="stage-icon green">⌁</div>
+              <h3>Security</h3>
+              <p>Scan artifacts</p>
+              <span class="stage-state">Ready</span>
+            </article>
+            <article class="stage-card" data-stage="4">
+              <span class="stage-number">05</span>
+              <div class="stage-icon cyan">⬡</div>
+              <h3>Container</h3>
+              <p>Push registry</p>
+              <span class="stage-state">Ready</span>
+            </article>
+            <article class="stage-card" data-stage="5">
+              <span class="stage-number">06</span>
+              <div class="stage-icon coral">↗</div>
+              <h3>Deploy</h3>
+              <p>Ship application</p>
+              <span class="stage-state">Ready</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="section comparison-section" id="comparison">
+          <div class="comparison-copy">
+            <span class="section-kicker">WHY MIGRATE?</span>
+            <h2>Same delivery goals.<br />A simpler developer experience.</h2>
+            <p>
+              Bring automation closer to the code with native pull-request checks,
+              reusable workflows, and repository-level visibility.
+            </p>
+          </div>
+
+          <div class="comparison-table" role="table" aria-label="Jenkins and GitHub Actions comparison">
+            <div class="table-row table-header" role="row">
+              <span role="columnheader">Capability</span>
+              <span role="columnheader">Jenkins</span>
+              <span role="columnheader">GitHub Actions</span>
+            </div>
+            <div class="table-row" role="row">
+              <span role="cell">Configuration</span>
+              <span role="cell">Jenkinsfile</span>
+              <span role="cell" class="highlight-cell">YAML workflow</span>
+            </div>
+            <div class="table-row" role="row">
+              <span role="cell">Infrastructure</span>
+              <span role="cell">Controller + agents</span>
+              <span role="cell" class="highlight-cell">Hosted / self-hosted runners</span>
+            </div>
+            <div class="table-row" role="row">
+              <span role="cell">Pull request checks</span>
+              <span role="cell">Plugin integration</span>
+              <span role="cell" class="highlight-cell">Native checks</span>
+            </div>
+            <div class="table-row" role="row">
+              <span role="cell">Marketplace</span>
+              <span role="cell">Plugins</span>
+              <span role="cell" class="highlight-cell">Reusable actions</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="cta-section">
+          <div>
+            <span class="section-kicker light">READY TO SHIP</span>
+            <h2>Make the move<br />visible.</h2>
+          </div>
+          <div class="cta-panel">
+            <div class="deployment-status">
+              <span class="success-icon">✓</span>
+              <div>
+                <strong id="deployment-title">Demo environment ready</strong>
+                <span id="deployment-copy">All pipeline stages are waiting to run.</span>
+              </div>
+            </div>
+            <button class="light-button" id="run-demo-secondary" type="button">Start workflow</button>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div class="brand footer-brand"><span class="brand-mark" aria-hidden="true">AD</span><strong>Aniket DevOps</strong></div>
+        <p>Jenkins → GitHub Actions migration project</p>
+        <p>Build with intent.</p>
+      </footer>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

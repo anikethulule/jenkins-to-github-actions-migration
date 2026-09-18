@@ -1,0 +1,13 @@
+{
+  "name": "aniket-devops-jenkins-github-actions-migration",
+  "version": "1.0.0",
+  "description": "Aniket DevOps project for migrating a Jenkins pipeline to GitHub Actions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
