@@ -19,7 +19,7 @@
 
 ## Project overview
 
-This **Aniket DevOps CI/CD Migration Project** is a hands-on project for learning how to move pipeline orchestration from a Jenkins server into a repository-native GitHub Actions workflow.
+This **jenkins-to-github-actions-migration** is a hands-on project for learning how to move pipeline orchestration from a Jenkins server into a repository-native GitHub Actions workflow.
 
 The project keeps the delivery goal unchanged:
 
@@ -31,7 +31,7 @@ The project keeps the delivery goal unchanged:
 6. Deploy the container to the existing Amazon EC2 server.
 7. Verify the release through the `/health` endpoint.
 
-The application is a Node.js and Express migration dashboard branded for **Aniket DevOps**. The same repository contains both pipeline implementations so that every Jenkins stage can be compared with its GitHub Actions replacement.
+The application is a Node.js and Express migration dashboard branded for **jenkins-to-github-actions-migration**. The same repository contains both pipeline implementations so that every Jenkins stage can be compared with its GitHub Actions replacement.
 
 > **Migration principle:** change the CI/CD orchestrator—not the application, container contract, registry pattern, deployment server, or health-check strategy.
 
@@ -253,7 +253,7 @@ Migration-Demo-Project-main/
 
 ---
 
-## Run the Aniket DevOps application locally
+## Run the  jenkins-to-github-actions-migration application locally
 
 ```bash
 git clone https://github.com/<YOUR_ACCOUNT>/<YOUR_REPOSITORY>.git
@@ -290,14 +290,14 @@ curl http://localhost:8080/health
 Build the image:
 
 ```bash
-docker build -t devopsshack/migration-demo:local .
+docker build -t anikethulule/migration-demo:local .
 ```
 
 Start the container:
 
 ```bash
 docker run --rm --name migration-demo -p 8081:8080 \
-  devopsshack/migration-demo:local
+  anikethulule/migration-demo:local
 ```
 
 Verify it:
@@ -520,7 +520,7 @@ curl -i http://localhost:8082/health
 
 ## DevOps learning outcomes
 
-After completing this **Aniket DevOps** project, you should be able to explain and demonstrate:
+After completing this **jenkins-to-github-actions-migration** project, you should be able to explain and demonstrate:
 
 - How Jenkins concepts translate into GitHub Actions concepts.
 - Why CI and CD should be separated into dependent jobs.
