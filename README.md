@@ -537,8 +537,7 @@ After completing this **Aniket DevOps** project, you should be able to explain a
 
 **Aniket DevOps** is a practical, production-oriented learning project focused on DevOps, DevSecOps, cloud, containers, Kubernetes, Terraform, GitOps, observability and AI for DevOps.
 
-- Website: [devopsshack.com](https://devopsshack.com)
-- GitHub: [github.com/jaiswaladi246](https://github.com/jaiswaladi246)
+- GitHub: [github.com/anikethulule](https://github.com/anikethulule)
 
 ### Built for the DevOps community by Aniket DevOps
 
