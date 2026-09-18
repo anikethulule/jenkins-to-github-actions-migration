@@ -1,4 +1,4 @@
-# Aniket DevOps
+# jenkins-to-github-actions-migration
 
 ## CI/CD Pipeline Migration Lab
 
@@ -6,20 +6,19 @@
 
 **A production-style DevOps project that demonstrates how to migrate an end-to-end Jenkins pipeline to GitHub Actions while preserving the existing application and deployment target.**
 
-[![Aniket DevOps](https://img.shields.io/badge/Aniket%20DevOps-Migration%20Project-1167D8?style=for-the-badge)]
 ![Node.js](https://img.shields.io/badge/Node.js-22-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Jenkins](https://img.shields.io/badge/Jenkins-Legacy%20Pipeline-D24939?style=for-the-badge&logo=jenkins&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Migrated%20Pipeline-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-ECR%20%7C%20SSM%20%7C%20EC2-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white)
 
-**Jenkins → GitHub Actions migration project — Aniket DevOps**
+**Jenkins → GitHub Actions migration project**
 
 ---
 
 ## Project overview
 
-This **jenkins-to-github-actions-migration** is a hands-on project for learning how to move pipeline orchestration from a Jenkins server into a repository-native GitHub Actions workflow.
+This **jenkins-to-github-actions-migration** project is a hands-on project for learning how to move pipeline orchestration from a Jenkins server into a repository-native GitHub Actions workflow.
 
 The project keeps the delivery goal unchanged:
 
@@ -31,7 +30,7 @@ The project keeps the delivery goal unchanged:
 6. Deploy the container to the existing Amazon EC2 server.
 7. Verify the release through the `/health` endpoint.
 
-The application is a Node.js and Express migration dashboard branded for **jenkins-to-github-actions-migration**. The same repository contains both pipeline implementations so that every Jenkins stage can be compared with its GitHub Actions replacement.
+The application is a Node.js and Express migration dashboard. The same repository contains both pipeline implementations so that every Jenkins stage can be compared with its GitHub Actions replacement.
 
 > **Migration principle:** change the CI/CD orchestrator—not the application, container contract, registry pattern, deployment server, or health-check strategy.
 
@@ -39,7 +38,7 @@ The application is a Node.js and Express migration dashboard branded for **jenki
 
 ## Deployed application preview
 
-The deployed application provides an interactive **Aniket DevOps CI/CD Migration Project** dashboard that visualizes the Jenkins-to-GitHub Actions workflow, pipeline stages, platform comparison and deployment status.
+The deployed application provides an interactive **jenkins-to-github-actions-migration** dashboard that visualizes the Jenkins-to-GitHub Actions workflow, pipeline stages, platform comparison and deployment status.
 
 ![Aniket DevOps CI/CD Pipeline Migration Dashboard](./devops-pipeline-migration-dashboard.png)
 
@@ -196,14 +195,21 @@ Migration-Demo-Project-main/
 │       └── cicd.yml          # Migrated GitHub Actions CI/CD pipeline
 ├── public/
 │   ├── app.js                # Interactive migration workflow UI
-│   ├── index.html            # Aniket DevOps migration dashboard
-│   └── styles.css            # Application styling
+│   ├── index.html            # Migration dashboard
+│   ├── styles.css            # Application styling
+│   ├── aniket-devops-migration-dashboard.jpg # Dashboard image asset
+│   └── favicon.svg           # Transparent browser icon
 ├── .dockerignore             # Docker build exclusions
 ├── Dockerfile                # Node.js 22 production image
 ├── Jenkinsfile               # Original Jenkins pipeline
 ├── package.json              # Application scripts and dependencies
 ├── server.js                 # Express server and API endpoints
 ├── test.js                   # Automated health, UI and API tests
+├── terraform/                # AWS infrastructure and EC2 bootstrap
+│   ├── main.tf               # ECR, IAM, security group and EC2 resources
+│   ├── variables.tf          # Infrastructure inputs
+│   ├── outputs.tf            # Instance and ECR outputs
+│   └── templates/jenkins-install.sh # Jenkins, Docker and AWS CLI setup
 └── README.md                 # DevOps project documentation
 ```
 
@@ -213,7 +219,7 @@ Migration-Demo-Project-main/
 
 | Category | Tools |
 |---|---|
-| Application | Node.js 22, Express 5, HTML, CSS, JavaScript |
+| Application | Node.js 22, Express 4, HTML, CSS, JavaScript |
 | Source control | Git and GitHub |
 | CI/CD | Jenkins and GitHub Actions |
 | Container platform | Docker |
@@ -251,9 +257,16 @@ Migration-Demo-Project-main/
 - An EC2 instance profile that can connect to SSM and pull images from ECR
 - Network access to the application on port `8082` for the smoke test
 
+### For Terraform provisioning
+
+- Terraform 1.6+
+- AWS CLI configured with permissions to create ECR, IAM, security group and EC2 resources
+- An existing VPC, subnet and EC2 key pair
+- An Ubuntu 24.04-compatible AWS region and an available public subnet
+
 ---
 
-## Run the  jenkins-to-github-actions-migration application locally
+## Run the application locally
 
 ```bash
 git clone https://github.com/<YOUR_ACCOUNT>/<YOUR_REPOSITORY>.git
@@ -273,7 +286,7 @@ http://localhost:8080
 
 | Endpoint | Purpose | Expected result |
 |---|---|---|
-| `/` | Aniket DevOps migration dashboard | HTML page |
+| `/` | Migration dashboard | HTML page |
 | `/health` | Runtime health check | HTTP 200 with `status: UP` |
 | `/api/migration` | Migration metadata | JSON describing the demo stages |
 
@@ -310,17 +323,59 @@ The Docker image runs as the non-root `node` user and exposes application port `
 
 ---
 
+## Provision Jenkins with Terraform
+
+The Terraform configuration provisions an Amazon ECR repository, an EC2 IAM instance profile, a security group, and an Ubuntu 24.04 EC2 instance. The instance bootstrap installs Java 21, Docker, AWS CLI v2, and Jenkins, then starts Docker and Jenkins.
+
+From the Terraform directory:
+
+```bash
+cd terraform
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+Review `terraform/terraform.tfvars` before applying. The current example targets `ap-south-1`, uses a `t3.medium` instance, and expects an existing VPC, subnet, and EC2 key pair. Restrict `allowed_ssh_cidr` and `allowed_web_cidr` to trusted ranges for real environments.
+
+After provisioning:
+
+```bash
+terraform output ec2_public_ip
+terraform output jenkins_url
+ssh -i /path/to/key.pem ubuntu@<EC2_PUBLIC_IP>
+sudo cloud-init status --wait
+which java
+which docker
+which aws
+which jenkins
+sudo systemctl status docker jenkins
+```
+
+The bootstrap output is written to `/var/log/jenkins-bootstrap.log`. The script installs AWS CLI v2 from the official AWS installer because `awscli` is not available from the Ubuntu 24.04 apt sources used by this image.
+
+To remove the Terraform-managed resources:
+
+```bash
+terraform destroy
+```
+
+---
+
 ## AWS and GitHub configuration
 
 ### 1. Create the ECR repository
 
-The GitHub Actions workflow expects:
+The GitHub Actions workflow currently expects:
 
 ```text
 migration-pipeline-reg
 ```
 
-Create it in `ap-south-1`, or update `AWS_REGION` and `ECR_REPOSITORY` in the workflow.
+Create it in `ap-south-1`, or update `AWS_REGION` and `ECR_REPOSITORY` in `.github/workflows/cicd.yml`.
+
+Note that the current Terraform example creates `jenkins-migration-demo`, while the workflow uses `migration-pipeline-reg`. These values must match before deployment, unless you intentionally maintain two repositories.
 
 ### 2. Configure GitHub repository variables
 
@@ -509,12 +564,19 @@ This prevents unmerged pull-request code from reaching the deployment environmen
 Useful checks on the EC2 instance:
 
 ```bash
+sudo cloud-init status --long
+sudo tail -100 /var/log/cloud-init-output.log
+sudo tail -100 /var/log/jenkins-bootstrap.log
 sudo systemctl status amazon-ssm-agent
 sudo systemctl status docker
+sudo systemctl status jenkins
+dpkg -l | grep -E 'jenkins|docker|openjdk'
 docker ps -a
 docker logs app
 curl -i http://localhost:8082/health
 ```
+
+If cloud-init reports `Failed to run module scripts_user`, inspect the bootstrap log first. A failure in the package installation step prevents later commands from running, so Docker and Jenkins may not be installed even though the EC2 instance was created successfully.
 
 ---
 
