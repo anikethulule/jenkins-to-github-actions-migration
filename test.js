@@ -35,7 +35,7 @@ async function runTests() {
     const pageResponse = await request(baseUrl);
     const page = await pageResponse.text();
 
-    if (!pageResponse.ok || !page.includes("Aniket DevOps")) {
+    if (!pageResponse.ok || !page.includes("Jenkins to GitHub Actions Migration")) {
       throw new Error("UI route test failed");
     }
 
