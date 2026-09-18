@@ -41,7 +41,7 @@ The application is a Node.js and Express migration dashboard branded for **Anike
 
 The deployed application provides an interactive **Aniket DevOps CI/CD Migration Project** dashboard that visualizes the Jenkins-to-GitHub Actions workflow, pipeline stages, platform comparison and deployment status.
 
-![Aniket DevOps CI/CD Pipeline Migration Dashboard](./devops-shack-pipeline-migration-dashboard.jpg)
+![Aniket DevOps CI/CD Pipeline Migration Dashboard](./devops-pipeline-migration-dashboard.png)
 
 ---
 
