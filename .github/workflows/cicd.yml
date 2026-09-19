@@ -16,7 +16,7 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: migration-pipeline-reg
+  ECR_REPOSITORY: jenkins-migration-demo
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
