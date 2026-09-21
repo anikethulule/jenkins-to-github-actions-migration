@@ -16,6 +16,72 @@
 
 ---
 
+## Table of Contents
+
+- [Quick Start (5-Minute Setup)](#quick-start-5-minute-setup)
+- [Project Overview](#project-overview)
+- [Architecture](#end-to-end-devops-architecture)
+- [Prerequisites](#prerequisites)
+- [GitHub Configuration Guide](#github-configuration-guide)
+- [AWS IAM & OIDC Setup](#aws-iam--oidc-setup)
+- [Local Development](#run-the-application-locally)
+- [Testing](#testing-guide)
+- [Deployment Verification](#deployment-verification-checklist)
+- [Troubleshooting Guide](#real-world-troubleshooting-guide)
+- [CI/CD Monitoring](#cicd-pipeline-monitoring--debugging)
+- [Cost Estimation](#cost-estimation)
+- [Contributing](#contributing--extensions)
+- [FAQs](#frequently-asked-questions)
+- [Security](#security-and-production-hardening)
+- [Learning Outcomes](#devops-learning-outcomes)
+
+---
+
+## Quick Start (5-Minute Setup)
+
+### Prerequisites
+- GitHub account with a repository
+- AWS account (free tier eligible)
+- Node.js 22+ and npm
+- Docker installed locally (optional for testing)
+
+### Setup Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/anikethulule/jenkins-to-github-actions-migration.git
+   cd jenkins-to-github-actions-migration
+   ```
+
+2. **Create AWS resources** (Terraform recommended)
+   ```bash
+   cd terraform
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+3. **Configure GitHub variables** (Settings → Secrets and variables → Variables)
+   - `AWS_ACCOUNT_ID`: Your 12-digit AWS account ID
+   - `EC2_INSTANCE_ID`: From Terraform output
+   - `EC2_PUBLIC_IP`: From Terraform output
+
+4. **Set up AWS OIDC** (see [AWS IAM & OIDC Setup](#aws-iam--oidc-setup) below)
+
+5. **Run the workflow**
+   - Push to `main` branch or create a pull request
+   - GitHub Actions automatically starts
+   - Monitor in **Actions** tab
+
+6. **Verify deployment**
+   ```bash
+   curl http://<EC2_PUBLIC_IP>:8082/health
+   ```
+
+Done! Your pipeline is now migrated. 🎉
+
+---
+
 ## Project overview
 
 This **jenkins-to-github-actions-migration** project is a hands-on project for learning how to move pipeline orchestration from a Jenkins server into a repository-native GitHub Actions workflow.
@@ -189,7 +255,7 @@ The migration preserves the delivery logic while replacing Jenkins-specific cons
 ## Repository structure
 
 ```text
-Migration-Demo-Project-main/
+jenkins-to-github-actions-migration/
 ├── .github/
 │   └── workflows/
 │       └── cicd.yml          # Migrated GitHub Actions CI/CD pipeline
@@ -197,7 +263,7 @@ Migration-Demo-Project-main/
 │   ├── app.js                # Interactive migration workflow UI
 │   ├── index.html            # Migration dashboard
 │   ├── styles.css            # Application styling
-│   ├── aniket-devops-migration-dashboard.jpg # Dashboard image asset
+│   ├── devops-pipeline-migration-dashboard.png # Dashboard image asset
 │   └── favicon.svg           # Transparent browser icon
 ├── .dockerignore             # Docker build exclusions
 ├── Dockerfile                # Node.js 22 production image
@@ -235,7 +301,7 @@ Migration-Demo-Project-main/
 
 - Node.js 22+
 - npm
-- Docker, if running the containerized version
+- Docker (optional, for container testing)
 
 ### For Jenkins execution
 
@@ -249,13 +315,14 @@ Migration-Demo-Project-main/
 ### For GitHub Actions execution
 
 - A GitHub repository containing this project
-- An Amazon ECR repository
-- A GitHub OIDC provider configured in AWS IAM
-- An IAM role named `GitHubActionsMigrationRole`, or an updated role name in the workflow
+- An Amazon ECR repository named `jenkins-migration-demo` (or update `.github/workflows/cicd.yml`)
+- A GitHub OIDC provider configured in AWS IAM (see [AWS IAM & OIDC Setup](#aws-iam--oidc-setup))
+- An IAM role named `GithubActionsMigrationRole` with proper trust policy and permissions
 - An EC2 deployment instance managed by AWS Systems Manager
 - Docker and AWS CLI installed on the EC2 instance
-- An EC2 instance profile that can connect to SSM and pull images from ECR
+- An EC2 instance profile with SSM and ECR pull permissions
 - Network access to the application on port `8082` for the smoke test
+- GitHub repository variables: `AWS_ACCOUNT_ID`, `EC2_INSTANCE_ID`, `EC2_PUBLIC_IP`
 
 ### For Terraform provisioning
 
@@ -266,11 +333,287 @@ Migration-Demo-Project-main/
 
 ---
 
+## GitHub Configuration Guide
+
+### Step 1: Create Repository Variables
+
+GitHub Actions workflows access configuration through repository variables (not secrets, since they're not sensitive).
+
+#### Navigate to Variables
+
+1. Go to your repository: `https://github.com/anikethulule/jenkins-to-github-actions-migration`
+2. Click **Settings** (top right)
+3. In the left sidebar, click **Secrets and variables** → **Actions**
+4. Click **Variables** tab
+
+#### Add `AWS_ACCOUNT_ID`
+
+| Field | Value |
+|---|---|
+| **Name** | `AWS_ACCOUNT_ID` |
+| **Value** | Your 12-digit AWS account ID (e.g., `072471709665`) |
+
+1. Click **New repository variable**
+2. Enter the name and value
+3. Click **Add variable**
+
+#### Add `EC2_INSTANCE_ID`
+
+| Field | Value |
+|---|---|
+| **Name** | `EC2_INSTANCE_ID` |
+| **Value** | Your EC2 instance ID (e.g., `i-04e5b81cd7589ac94`) |
+
+Find this in **AWS Console → EC2 → Instances** or from Terraform output:
+```bash
+cd terraform
+terraform output ec2_instance_id
+```
+
+#### Add `EC2_PUBLIC_IP`
+
+| Field | Value |
+|---|---|
+| **Name** | `EC2_PUBLIC_IP` |
+| **Value** | Your EC2 public IP address (e.g., `15.207.223.224`) |
+
+Find this in **AWS Console → EC2 → Instances** or from Terraform output:
+```bash
+cd terraform
+terraform output ec2_public_ip
+```
+
+### Step 2: Verify Variables Are Set
+
+Add this temporary step to your workflow to confirm variables are available:
+
+```yaml
+- name: Verify GitHub Variables
+  run: |
+    echo "AWS_ACCOUNT_ID is set: ${{ vars.AWS_ACCOUNT_ID != '' }}"
+    echo "EC2_INSTANCE_ID is set: ${{ vars.EC2_INSTANCE_ID != '' }}"
+    echo "EC2_PUBLIC_IP is set: ${{ vars.EC2_PUBLIC_IP != '' }}"
+```
+
+Run a workflow and check the logs. All three should show `true`.
+
+### Step 3: Create ECR Repository
+
+The workflow pushes images to an ECR repository. Create it:
+
+1. Go to **AWS Console → ECR → Repositories**
+2. Click **Create repository**
+3. **Repository name:** `jenkins-migration-demo`
+4. **Visibility:** Private
+5. Click **Create repository**
+
+Note the repository URI (e.g., `072471709665.dkr.ecr.ap-south-1.amazonaws.com/jenkins-migration-demo`) and this ECR will be created through terraform code only.
+
+---
+
+## AWS IAM & OIDC Setup
+
+This section walks through setting up GitHub OIDC authentication in AWS so GitHub Actions can assume a role without storing long-lived credentials.
+
+### Step 1: Create the OIDC Provider in AWS
+
+The GitHub OIDC provider must be registered in your AWS account.
+
+#### Using AWS Console
+
+1. Go to **AWS Console → IAM → Identity providers**
+2. Click **Add provider**
+3. Select **OpenID Connect**
+4. Fill in:
+   | Field | Value |
+   |---|---|
+   | **Provider URL** | `https://token.actions.githubusercontent.com` |
+   | **Audience** | `sts.amazonaws.com` |
+   
+5. Click **Add provider**
+
+#### Using AWS CLI
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com 
+```
+
+#### Verify It Was Created
+
+```bash
+aws iam list-open-id-connect-providers
+```
+
+Should output:
+```json
+{
+    "OpenIDConnectProviderList": [
+        {
+            "Arn": "arn:aws:iam::072471709665:oidc-provider/token.actions.githubusercontent.com"
+        }
+    ]
+}
+```
+
+### Step 2: Create the IAM Role
+
+The role that GitHub Actions will assume.
+
+#### Using AWS Console
+
+1. Go to **AWS Console → IAM → Roles**
+2. Click **Create role**
+3. Select **Custom trust policy**
+4. Paste this trust policy:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::072471709665:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                },
+                "StringLike": {
+                    "token.actions.githubusercontent.com:sub": "repo:anikethulule@129358060/jenkins-to-github-actions-migration@*"
+                }
+            }
+        }
+    ]
+}
+```
+
+**⚠️ IMPORTANT:** Replace:
+- `072471709665` with your AWS account ID
+- `anikethulule@129358060` with your GitHub username and user ID
+- `jenkins-to-github-actions-migration` with your repository name
+
+5. Click **Next**
+6. **Role name:** `GithubActionsMigrationRole` (note the capitalization)
+7. Click **Create role**
+
+#### Using AWS CLI
+
+```bash
+cat > trust-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::072471709665:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                },
+                "StringLike": {
+                    "token.actions.githubusercontent.com:sub": "repo:anikethulule@129358060/jenkins-to-github-actions-migration@*"
+                }
+            }
+        }
+    ]
+}
+EOF
+
+aws iam create-role \
+  --role-name GithubActionsMigrationRole \
+  --assume-role-policy-document file://trust-policy.json
+```
+
+### Step 3: Attach Permissions to the Role
+
+The role needs permissions to:
+- Authenticate to ECR
+- Send SSM commands to EC2
+- Push images to ECR
+
+#### Attach ECR Permissions
+
+```bash
+aws iam attach-role-policy \
+  --role-name GithubActionsMigrationRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+```
+
+#### Attach SSM Permissions
+
+```bash
+aws iam attach-role-policy \
+  --role-name GithubActionsMigrationRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMFullAccess
+```
+
+Or use a custom least-privilege policy:
+
+```bash
+cat > ssm-ecr-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:SendCommand",
+                "ssm:GetCommandInvocation"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+aws iam put-role-policy \
+  --role-name GithubActionsMigrationRole \
+  --policy-name GithubActionsMigrationPolicy \
+  --policy-document file://ssm-ecr-policy.json
+```
+
+### Step 4: Verify the Setup
+
+#### Check the Role
+
+```bash
+aws iam get-role --role-name GithubActionsMigrationRole
+```
+
+#### Check Attached Policies
+
+```bash
+aws iam list-attached-role-policies --role-name GithubActionsMigrationRole
+```
+
+#### Check Trust Policy
+
+```bash
+aws iam get-role --role-name GithubActionsMigrationRole --query 'Role.AssumeRolePolicyDocument'
+```
+
+### Step 5: Update Workflow Role Reference (if needed)
+
+In `.github/workflows/cicd.yml`, verify the role ARN matches:
+
+```yaml
+role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GithubActionsMigrationRole
+```
+
+---
+
 ## Run the application locally
 
 ```bash
 git clone https://github.com/<YOUR_ACCOUNT>/<YOUR_REPOSITORY>.git
-cd Migration-Demo-Project-main
+cd jenkins-to-github-actions-migration
 npm install
 npm test
 npm start
@@ -323,6 +666,347 @@ The Docker image runs as the non-root `node` user and exposes application port `
 
 ---
 
+## Testing Guide
+
+### Run Tests Locally
+
+```bash
+npm install
+npm test
+```
+
+### What the Tests Check
+
+The test suite (`test.js`) validates:
+
+1. **Server startup** - Express server is listening
+2. **Health endpoint** - `/health` returns `status: UP`
+3. **Dashboard HTML** - `/` serves the migration dashboard
+4. **API endpoint** - `/api/migration` returns valid JSON
+5. **Port configuration** - Application runs on port 8080
+
+### Interpret Test Results
+
+**Success output:**
+```
+✓ Health check passed
+✓ Dashboard loaded
+✓ API endpoints working
+All tests passed!
+```
+
+**Failure output:**
+```
+✗ Health check failed: Connection refused
+```
+
+Common failures:
+- Port 8080 already in use
+- Node.js version mismatch
+- Missing dependencies (`npm install`)
+
+### Debug Tests
+
+Run with verbose output:
+
+```bash
+npm test -- --verbose
+```
+
+Check logs:
+
+```bash
+node server.js  # Start server manually
+# In another terminal:
+curl http://localhost:8080/health
+```
+
+---
+
+## Deployment Verification Checklist
+
+After the GitHub Actions workflow completes, use this checklist to confirm the deployment succeeded.
+
+### ✅ Pre-Deployment Checks
+
+- [ ] GitHub Actions workflow completed successfully (green checkmark)
+- [ ] No errors in the workflow logs
+- [ ] ECR image was pushed (verify in AWS Console → ECR)
+- [ ] Image tag matches the GitHub commit SHA
+
+### ✅ AWS Checks
+
+```bash
+# Verify ECR image exists
+aws ecr describe-images \
+  --repository-name jenkins-migration-demo \
+  --region ap-south-1
+
+# Verify EC2 instance is running
+aws ec2 describe-instances \
+  --instance-ids i-04e5b81cd7589ac94 \
+  --region ap-south-1
+```
+
+### ✅ EC2 Instance Checks
+
+SSH into the EC2 instance:
+
+```bash
+ssh -i /path/to/key.pem ubuntu@<EC2_PUBLIC_IP>
+```
+
+Check Docker containers:
+
+```bash
+docker ps -a
+docker logs app
+```
+
+Check application health:
+
+```bash
+curl http://localhost:8082/health
+```
+
+Check port mapping:
+
+```bash
+docker port app
+```
+
+### ✅ Application Checks
+
+From your local machine:
+
+```bash
+# Verify the application is accessible
+curl -v http://<EC2_PUBLIC_IP>:8082/health
+
+# Should respond with:
+# HTTP/1.1 200 OK
+# {"status":"UP"}
+```
+
+### ✅ Final Validation
+
+1. Open browser: `http://<EC2_PUBLIC_IP>:8082`
+2. Dashboard should load
+3. No application errors in browser console
+
+---
+
+## Real-World Troubleshooting Guide
+
+This section addresses the exact errors you may encounter and how to fix them.
+
+### Error: "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+
+**When this happens:** GitHub Actions tries to assume the role but fails.
+
+**Root causes:**
+1. Trust policy is missing or incorrect
+2. Role doesn't exist or has a typo in the name
+3. OIDC provider doesn't exist
+
+**Fix:**
+
+1. Verify the role exists and name is correct (case-sensitive):
+   ```bash
+   aws iam get-role --role-name GithubActionsMigrationRole
+   ```
+
+2. Verify the OIDC provider exists:
+   ```bash
+   aws iam list-open-id-connect-providers
+   ```
+
+3. Verify the trust policy:
+   ```bash
+   aws iam get-role --role-name GithubActionsMigrationRole \
+     --query 'Role.AssumeRolePolicyDocument'
+   ```
+
+4. Trust policy should contain:
+   ```json
+   "Federated": "arn:aws:iam::072471709665:oidc-provider/token.actions.githubusercontent.com"
+   ```
+
+5. Update workflow to match exact role name:
+   ```yaml
+   role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GithubActionsMigrationRole
+   ```
+
+### Error: "ecr:GetAuthorizationToken denied"
+
+**When this happens:** Docker login to ECR fails.
+
+**Root cause:** The `GithubActionsMigrationRole` doesn't have ECR permissions.
+
+**Fix:**
+
+Attach ECR policy to the role:
+
+```bash
+aws iam attach-role-policy \
+  --role-name GithubActionsMigrationRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+```
+
+Or attach a custom policy with `ecr:GetAuthorizationToken` permission.
+
+### Error: Role name case-sensitivity issue
+
+**When this happens:** "GitHubActionsMigrationRole" vs "GithubActionsMigrationRole" mismatch.
+
+**Root cause:** AWS role names are case-sensitive, but the workflow uses wrong casing.
+
+**Fix:**
+
+Option 1: Rename the role in AWS to match the workflow
+```bash
+# Create new role with correct name
+aws iam create-role \
+  --role-name GitHubActionsMigrationRole \
+  --assume-role-policy-document file://trust-policy.json
+
+# Copy policies from old role
+# Delete old role
+```
+
+Option 2: Update workflow to match the role name exactly:
+```yaml
+role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GithubActionsMigrationRole
+```
+
+**Verify role name:**
+```bash
+aws iam list-roles --query "Roles[*].RoleName" | grep -i github
+```
+
+### Error: "Docker permission denied while trying to connect to the Docker daemon"
+
+**When this happens:** User doesn't have Docker permissions on EC2.
+
+**Root cause:** User is not in the `docker` group.
+
+**Fix:**
+
+On EC2 instance:
+
+```bash
+# Add user to docker group
+sudo usermod -aG docker ubuntu
+
+# Log out and back in, or:
+newgrp docker
+
+# Verify
+docker ps
+```
+
+### Error: "Cannot connect to ECR" or "Pull access denied"
+
+**When this happens:** EC2 cannot pull the image from ECR.
+
+**Root causes:**
+1. EC2 instance role doesn't have ECR permissions
+2. Image doesn't exist in ECR
+3. Region mismatch
+
+**Fix:**
+
+1. Verify EC2 instance role has ECR permissions:
+   ```bash
+   aws iam get-role --role-name ApplicationEC2Role \
+     --query 'Role.AssumeRolePolicyDocument'
+   ```
+
+2. Attach ECR pull policy:
+   ```bash
+   aws iam attach-role-policy \
+     --role-name ApplicationEC2Role \
+     --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+   ```
+
+3. Verify image exists:
+   ```bash
+   aws ecr describe-images \
+     --repository-name jenkins-migration-demo \
+     --region ap-south-1
+   ```
+
+4. Test pull manually on EC2:
+   ```bash
+   ssh -i /path/to/key.pem ubuntu@<EC2_PUBLIC_IP>
+   aws ecr get-login-password --region ap-south-1 | \
+     docker login --username AWS --password-stdin \
+     072471709665.dkr.ecr.ap-south-1.amazonaws.com
+   docker pull 072471709665.dkr.ecr.ap-south-1.amazonaws.com/jenkins-migration-demo:latest
+   ```
+
+---
+
+## CI/CD Pipeline Monitoring & Debugging
+
+### View Workflow Runs
+
+1. Go to your repository
+2. Click **Actions** tab
+3. View the list of workflow runs
+4. Click a run to see details
+
+### View Workflow Logs
+
+1. Click on a workflow run
+2. Click the job name (e.g., "build-test-push")
+3. Expand each step to see logs
+
+### Common Log Patterns
+
+**Success:**
+```
+✓ All steps passed
+✓ Image pushed to ECR
+✓ Deployment completed
+```
+
+**Failure points:**
+- `npm install` - dependency issues
+- `npm test` - test failures
+- `docker build` - Dockerfile issues
+- `aws ecr get-login-password` - authentication issues
+- `docker push` - registry issues
+- `aws ssm send-command` - deployment issues
+
+### Debug a Failed Workflow
+
+1. **Check the exact step that failed** - look for red ✗
+2. **Expand that step** to see full error message
+3. **Check variables** - ensure `AWS_ACCOUNT_ID`, etc. are set
+4. **Check permissions** - role has required IAM policies
+5. **Check resources** - ECR repo exists, EC2 instance is running
+6. **Re-run the workflow** - temporary issues sometimes resolve on retry
+
+**Re-run workflow:**
+1. Click the workflow run
+2. Click **Re-run all jobs** button (top right)
+
+### Enable Debug Logging
+
+Add this to your workflow for more verbose output:
+
+```yaml
+- name: Configure AWS credentials
+  uses: aws-actions/configure-aws-credentials@v6
+  with:
+    role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GithubActionsMigrationRole
+    aws-region: ap-south-1
+    debug: true  # Enable debug logging
+```
+
+---
+
 ## Provision Jenkins with Terraform
 
 The Terraform configuration provisions an Amazon ECR repository, an EC2 IAM instance profile, a security group, and an Ubuntu 24.04 EC2 instance. The instance bootstrap installs Java 21, Docker, AWS CLI v2, and Jenkins, then starts Docker and Jenkins.
@@ -360,151 +1044,17 @@ To remove the Terraform-managed resources:
 ```bash
 terraform destroy
 ```
-
 ---
 
-## AWS and GitHub configuration
+### How to Contribute
 
-### 1. Create the ECR repository
-
-The GitHub Actions workflow currently expects:
-
-```text
-migration-pipeline-reg
-```
-
-Create it in `ap-south-1`, or update `AWS_REGION` and `ECR_REPOSITORY` in `.github/workflows/cicd.yml`.
-
-Note that the current Terraform example creates `jenkins-migration-demo`, while the workflow uses `migration-pipeline-reg`. These values must match before deployment, unless you intentionally maintain two repositories.
-
-### 2. Configure GitHub repository variables
-
-Go to **GitHub repository → Settings → Secrets and variables → Actions → Variables**.
-
-| Variable | Purpose |
-|---|---|
-| `AWS_ACCOUNT_ID` | Builds the IAM role ARN and ECR registry URL |
-| `EC2_INSTANCE_ID` | Identifies the SSM-managed deployment instance |
-| `EC2_PUBLIC_IP` | Used by the post-deployment smoke test |
-
-No long-lived AWS access key is required by this workflow.
-
-### 3. Configure GitHub OIDC in AWS
-
-The workflow requires:
-
-```yaml
-permissions:
-  id-token: write
-  contents: read
-```
-
-`id-token: write` allows the workflow to request a GitHub OIDC token. AWS validates that token and issues temporary credentials for the IAM role.
-
-Restrict the role trust policy to the intended organization, repository and branch. A typical subject condition is:
-
-```text
-repo:<GITHUB_ORG>/<REPOSITORY>:ref:refs/heads/main
-```
-
-The GitHub Actions role needs only the permissions required to:
-
-- Call `sts:GetCallerIdentity`.
-- Authenticate and push images to the selected ECR repository.
-- Call `ssm:SendCommand` for the selected EC2 instance.
-- Read the SSM command result while the workflow waits for completion.
-
-### 4. Prepare the EC2 deployment target
-
-The EC2 instance must:
-
-- Be online and registered as an SSM managed node.
-- Have the SSM Agent running.
-- Have Docker installed and running.
-- Have AWS CLI available to the remote shell.
-- Use an instance profile with `AmazonSSMManagedInstanceCore`-equivalent access.
-- Have least-privilege ECR pull permissions.
-- Allow application traffic on port `8082` from the required source range.
-
----
-
-## Migration runbook
-
-Use this order when moving a real pipeline from Jenkins to GitHub Actions.
-
-### Phase 1 — Discover
-
-- Inventory every Jenkins stage, tool, credential and integration.
-- Record triggers, parameters, agents, timeouts and post-build actions.
-- Identify which deployment behaviors must remain unchanged.
-
-### Phase 2 — Map
-
-- Convert Jenkins agents to GitHub-hosted or self-hosted runners.
-- Convert Jenkins tools to setup actions.
-- Convert stages into jobs and steps.
-- Replace Jenkins credentials with GitHub OIDC, secrets or environment protection.
-
-### Phase 3 — Build CI first
-
-- Implement checkout, runtime setup, dependency installation and tests.
-- Build the same Docker image locally and in both CI systems.
-- Keep Jenkins as the active deployment path during early validation.
-
-### Phase 4 — Publish safely
-
-- Push commit-tagged images from GitHub Actions.
-- Confirm image architecture, labels, digest and ECR repository path.
-- Compare the Jenkins and GitHub-produced artifacts.
-
-### Phase 5 — Add deployment
-
-- Deploy the exact image produced by the CI job.
-- Use SSM instead of opening SSH access to the runner.
-- Run an automated smoke test after container startup.
-
-### Phase 6 — Parallel validation
-
-- Run Jenkins and GitHub Actions for the same representative commits.
-- Compare test results, images, logs, deployment time and application health.
-- Keep the Jenkins pipeline available as a fallback until acceptance criteria pass.
-
-### Phase 7 — Cut over and retire
-
-- Make GitHub Actions the authoritative pipeline.
-- Protect the production branch and deployment environment.
-- Monitor the first releases closely.
-- Retire Jenkins credentials, jobs and infrastructure only after the rollback window closes.
-
----
-
-## Release validation and rollback
-
-### Validation checklist
-
-- [ ] Tests passed before the image was built.
-- [ ] AWS identity matches the expected account and role.
-- [ ] ECR contains the expected commit-tagged image.
-- [ ] SSM command completed successfully.
-- [ ] The `app` container is running on EC2.
-- [ ] Port `8082` maps to container port `8080`.
-- [ ] `/health` returns HTTP 200 and `status: UP`.
-- [ ] Application logs show no startup failures.
-
-### Basic rollback strategy
-
-Because images are tagged with an immutable Git SHA, rollback can reuse a previously verified image:
-
-```bash
-docker pull <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<REPOSITORY>:<PREVIOUS_SHA>
-docker stop app || true
-docker rm app || true
-docker run -d --name app -p 8082:8080 \
-  <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<REPOSITORY>:<PREVIOUS_SHA>
-curl --fail http://localhost:8082/health
-```
-
-For production systems, add load-balancer health checks or a blue-green strategy to prevent service interruption during container replacement.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Test locally: `npm test`
+5. Commit: `git commit -am 'Add feature'`
+6. Push: `git push origin feature/your-feature`
+7. Create a Pull Request
 
 ---
 
@@ -548,38 +1098,6 @@ This prevents unmerged pull-request code from reaching the deployment environmen
 
 ---
 
-## Troubleshooting
-
-| Problem | What to verify |
-|---|---|
-| OIDC role cannot be assumed | IAM OIDC provider, role ARN, audience and repository subject condition |
-| `ecr:GetAuthorizationToken` denied | GitHub Actions role contains the ECR authorization permission |
-| ECR push denied | Repository name, region and repository-scoped upload permissions |
-| SSM command fails | Instance is managed by SSM, instance ID is correct and SSM Agent is online |
-| EC2 cannot pull the image | EC2 instance role has ECR pull access and uses the correct region |
-| Container will not start | Docker logs, port conflict, image architecture and application startup output |
-| Smoke test fails | Security group, public IP, port `8082`, startup delay and `/health` response |
-| GitHub workflow does not start | Workflow path, YAML syntax and `main` branch trigger |
-
-Useful checks on the EC2 instance:
-
-```bash
-sudo cloud-init status --long
-sudo tail -100 /var/log/cloud-init-output.log
-sudo tail -100 /var/log/jenkins-bootstrap.log
-sudo systemctl status amazon-ssm-agent
-sudo systemctl status docker
-sudo systemctl status jenkins
-dpkg -l | grep -E 'jenkins|docker|openjdk'
-docker ps -a
-docker logs app
-curl -i http://localhost:8082/health
-```
-
-If cloud-init reports `Failed to run module scripts_user`, inspect the bootstrap log first. A failure in the package installation step prevents later commands from running, so Docker and Jenkins may not be installed even though the EC2 instance was created successfully.
-
----
-
 ## DevOps learning outcomes
 
 After completing this **jenkins-to-github-actions-migration** project, you should be able to explain and demonstrate:
@@ -593,3 +1111,18 @@ After completing this **jenkins-to-github-actions-migration** project, you shoul
 - Why deployment completion and application health are different checks.
 - How to migrate a pipeline incrementally without changing the application server.
 
+---
+
+## License
+
+This project is provided as-is for educational purposes.
+
+## Support
+
+For issues, questions, or contributions, please open a GitHub Issue or Pull Request.
+
+---
+
+**Last Updated:** September 2026
+**Project Status:** Active
+**Maintained by:** [Aniket Hulule](https://github.com/anikethulule)
